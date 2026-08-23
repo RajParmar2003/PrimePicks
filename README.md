@@ -67,3 +67,4 @@ Built in collaboration with AI (Anthropic's Claude) over an intense few weeks: t
 MIT licensed. Not affiliated with any football league, club, or data provider.
 
 
+
