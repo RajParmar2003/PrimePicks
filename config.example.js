@@ -9,3 +9,4 @@ const FIREBASE_CONFIG = {
   projectId: "PASTE_YOUR_PROJECT_ID",
 };
 
+
