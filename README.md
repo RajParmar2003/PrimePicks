@@ -65,3 +65,4 @@ TypeScript from day one: the engine's shape-passing is exactly where types pay f
 Built in collaboration with AI (Anthropic's Claude) over an intense few weeks: the architecture decisions, QA direction, fact-checking discipline, and product design came from iterating on real failures with real users (my friends, who are ruthless bug reporters). Every line has been read, every tradeoff can be defended.
 
 MIT licensed. Not affiliated with any football league, club, or data provider.
+
