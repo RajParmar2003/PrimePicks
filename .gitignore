@@ -1,0 +1,10 @@
+# --- keep private (operational / personal) ---
+config.js            # real Firebase project keys — copy config.example.js and fill in
+EXIT-CRITERIA.md     # internal ops runbook (contains account + live-site details)
+deploy/              # generated Netlify drop folder — rebuild by copying source files
+
+# --- machine junk ---
+.DS_Store
+qa/node_modules/
+*.log
+season-backup*.json

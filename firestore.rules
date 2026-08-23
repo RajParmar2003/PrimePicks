@@ -1,0 +1,137 @@
+rules_version = '2';
+// ============================================================
+// PrimePicks ARENA — Firestore security rules (groups edition)
+// Paste into Firebase console → Firestore Database → Rules → Publish
+// ============================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function authed() { return request.auth != null; }
+    // anyone who runs a group may maintain shared facts (fixtures, results)
+    function isPoolAdmin() {
+      return authed()
+        && exists(/databases/$(database)/documents/poolAdmins/$(request.auth.uid));
+    }
+    function kickoff(fid) {
+      return get(/databases/$(database)/documents/fixtures/$(fid)).data.kickoff;
+    }
+    function validEntry(e) {
+      return e.keys().hasOnly(['pick', 'banker'])
+        && e.pick in ['H', 'A', 'D', 'HD', 'AD']
+        && e.banker is bool;
+    }
+    // avatars: preset code, or a Google-hosted photo ONLY — never an arbitrary URL
+    // (arbitrary URLs would let a member harvest other members' IPs via image loads)
+    function validAvatar(a) {
+      return a is string && a.size() <= 300
+        && (a == '' || a.matches('c[0-9]+') || a.matches('g:https://lh3\\.googleusercontent\\.com/.*'));
+    }
+    function validMember(m) {
+      return m.keys().hasOnly(['name', 'avatar', 'joinedAt'])
+        && m.name is string && m.name.size() >= 1 && m.name.size() <= 20
+        && (!('avatar' in m) || validAvatar(m.avatar));
+    }
+
+    // ---- groups: doc id IS the invite code ----
+    match /pools/{code} {
+      allow read: if authed();
+      allow create: if authed()
+        && request.resource.data.keys().hasOnly(['name', 'adminUid', 'comps', 'createdAt', 'members', 'settings'])
+        && request.resource.data.adminUid == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 30
+        && request.resource.data.members.keys().hasOnly([request.auth.uid])
+        && validMember(request.resource.data.members[request.auth.uid]);
+      // admin edits anything; anyone else may only add/edit/remove their own member entry
+      // (joining/leaving), with a shape-checked entry — and joining is blocked while locked
+      allow update: if authed() && (
+        resource.data.adminUid == request.auth.uid
+        || ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+             && request.resource.data.members.diff(resource.data.members).affectedKeys().hasOnly([request.auth.uid])
+             && ( !(request.auth.uid in request.resource.data.members)   // leaving, or…
+                  || validMember(request.resource.data.members[request.auth.uid]) )
+             && !( !(request.auth.uid in resource.data.members)          // new joiner…
+                   && 'settings' in resource.data
+                   && resource.data.settings.get('locked', false) == true ) ) // …blocked when locked
+      );
+      // SAFETY: groups cannot be deleted through the app/API at all — a whole season
+      // lives here. Deliberate deletion = Firebase console only.
+      allow delete: if false;
+    }
+
+    // which groups a user belongs to (own bookkeeping)
+    match /users/{uid} {
+      allow read, write: if authed() && request.auth.uid == uid;
+    }
+
+    // registry of group admins — claimable only by the real admin of a real pool
+    match /poolAdmins/{uid} {
+      allow read: if authed();
+      allow create, update: if authed() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['pool'])
+        && get(/databases/$(database)/documents/pools/$(request.resource.data.pool)).data.adminUid == request.auth.uid;
+      allow delete: if false; // SAFETY: losing admin rights mid-season would orphan results entry
+    }
+
+    // shared facts: fixtures + kickoff overrides + results (any pool admin maintains)
+    match /fixtures/{fid} {
+      allow read: if authed();
+      allow create, update: if isPoolAdmin();
+    }
+    match /meta/overrides {
+      allow read: if authed();
+      allow create, update: if isPoolAdmin();
+    }
+    match /resultsGw/{gw} {
+      allow read: if authed();
+      allow create, update: if isPoolAdmin();
+      allow delete: if false;
+    }
+
+    match /profiles/{uid} {
+      allow read: if authed();
+      allow create, update: if authed() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'avatar', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 20
+        && (!('avatar' in request.resource.data) || validAvatar(request.resource.data.avatar));
+    }
+
+    // your private picks mirror — only you, ever
+    match /myPicks/{uid} {
+      allow read, write: if authed() && request.auth.uid == uid;
+    }
+
+    // shared picks: readable AFTER kickoff, writable BEFORE, own key only
+    match /picksByFixture/{fid} {
+      allow get: if authed() && request.time >= kickoff(fid);
+      allow list: if false;
+      allow create: if authed() && request.time < kickoff(fid)
+        && request.resource.data.keys().hasOnly([request.auth.uid])
+        && validEntry(request.resource.data[request.auth.uid]);
+      allow update: if authed() && request.time < kickoff(fid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([request.auth.uid])
+        && (!(request.auth.uid in request.resource.data)
+            || validEntry(request.resource.data[request.auth.uid]));
+      allow delete: if false;
+    }
+
+    // plays: own doc only; engine enforces per-split limits deterministically
+    match /plays/{uid} {
+      allow read: if authed();
+      allow create, update: if authed() && request.auth.uid == uid
+        && request.resource.data.keys().size() <= 400;   // bloat guard
+      allow delete: if false;
+    }
+
+    // aggregate pick counts (Oracle preview) — client-maintained, display-only;
+    // scoring never trusts these. Shape locked to the five pick values.
+    match /counts/{fid} {
+      allow read: if authed();
+      allow create, update: if authed()
+        && request.resource.data.keys().hasOnly(['H', 'A', 'D', 'HD', 'AD']);
+      allow delete: if false;
+    }
+  }
+}

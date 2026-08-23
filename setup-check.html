@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARENA — Setup pre-flight check</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<style>
+:root{ --bg:#070b16; --panel:#101a30; --panel2:#182642; --line:#22345c; --txt:#eef3ff; --txt2:#ccd8f2;
+  --dim:#8b9cc4; --grn:#22ff88; --mag:#ff2e88; --gold:#ffcf40; --ink:#03210f; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:24px 16px}
+.wrap{max-width:620px;margin:0 auto}
+h1{font-size:22px;font-weight:900}
+h1 em{font-style:normal;color:var(--grn)}
+.sub{color:var(--dim);font-size:13px;margin:6px 0 18px}
+.check{display:flex;gap:12px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.check .ic{font-size:18px;width:24px;text-align:center;flex-shrink:0}
+.check .t{font-weight:800;font-size:14px}
+.check .d{font-size:12px;color:var(--txt2);margin-top:3px;line-height:1.5}
+.check.pass{border-color:rgba(34,255,136,.45)}
+.check.fail{border-color:var(--mag)}
+.check.warn{border-color:var(--gold)}
+.check .d b{color:var(--gold)}
+input{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px 12px;font-size:14px;width:100%;margin-top:8px}
+button{background:var(--grn);color:var(--ink);border:none;border-radius:11px;padding:11px 18px;font-size:14px;font-weight:800;cursor:pointer;margin-top:10px}
+button.ghost{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+#verdict{margin-top:18px;padding:16px;border-radius:14px;font-weight:800;text-align:center;display:none}
+#verdict.go{display:block;background:rgba(34,255,136,.12);border:1px solid var(--grn);color:var(--grn)}
+#verdict.no{display:block;background:rgba(255,46,136,.10);border:1px solid var(--mag);color:var(--mag)}
+a{color:var(--grn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Prime<em>Picks</em> ARENA — pre-flight check</h1>
+  <div class="sub">Run this after each step of SETUP.md. Ship only when everything below is green.</div>
+  <div id="checks"></div>
+  <div id="signinbox" style="display:none">
+    <div class="check"><div class="ic">🔑</div><div style="flex:1">
+      <div class="t">Sign in to run the deeper checks</div>
+      <div class="d">Use the account you'll join with (or any test account — Join happens in the app itself).</div>
+      <button onclick="signedChecks('google')">Continue with Google & run checks</button>
+      <input id="em" type="email" placeholder="or email">
+      <input id="pw" type="password" placeholder="password">
+      <button class="ghost" onclick="signedChecks(true)">Sign in with email & continue</button>
+      <button class="ghost" onclick="signedChecks(false)">Skip signed-in checks</button>
+    </div></div>
+  </div>
+  <div id="verdict"></div>
+</div>
+<script>
+const el = document.getElementById('checks');
+function put(id, state, title, detail){
+  let c = document.getElementById('c-' + id);
+  if (!c){ c = document.createElement('div'); c.id = 'c-' + id; el.appendChild(c); }
+  const ic = state === 'pass' ? '✅' : state === 'fail' ? '❌' : state === 'warn' ? '⚠️' : '⏳';
+  c.className = 'check ' + state;
+  c.innerHTML = `<div class="ic">${ic}</div><div><div class="t">${title}</div><div class="d">${detail || ''}</div></div>`;
+}
+let results = {};
+function record(id, passState){ results[id] = passState; verdict(); }
+function verdict(){
+  const v = document.getElementById('verdict');
+  const vals = Object.values(results);
+  if (vals.some(x => x === 'fail')){ v.className = 'no'; v.textContent = '✗ Not ready — fix the red items above (SETUP.md has the matching step), then reload this page.'; return; }
+  if (vals.length >= 6 && vals.every(x => x === 'pass')){ v.className = 'go'; v.textContent = '✓ ALL CLEAR — the arena is ready. Send the boys the link.'; }
+}
+
+(async () => {
+  /* 1. config pasted */
+  const cfgOk = typeof FIREBASE_CONFIG !== 'undefined' && FIREBASE_CONFIG.projectId && !/PASTE/i.test(FIREBASE_CONFIG.projectId + FIREBASE_CONFIG.apiKey);
+  put('cfg', cfgOk ? 'pass' : 'fail', 'config.js has real keys',
+    cfgOk ? 'Project: ' + FIREBASE_CONFIG.projectId : 'Still placeholder values — SETUP.md step 2.');
+  record('cfg', cfgOk ? 'pass' : 'fail');
+  if (!cfgOk) return;
+
+  /* 2. SDK loaded */
+  const sdkOk = typeof firebase !== 'undefined';
+  put('sdk', sdkOk ? 'pass' : 'fail', 'Firebase SDK loads', sdkOk ? '' : 'Check your internet connection / adblocker.');
+  record('sdk', sdkOk ? 'pass' : 'fail');
+  if (!sdkOk) return;
+
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.firestore();
+  const auth = firebase.auth();
+
+  /* 3. project reachable + rules published (unauthenticated read must be DENIED) */
+  put('rules', 'wait', 'Security rules are published', 'Testing…');
+  try{
+    await db.doc('meta/admin').get();
+    put('rules', 'fail', 'Security rules are published',
+      'An anonymous read SUCCEEDED — your database is unprotected. Paste firestore.rules and press Publish (SETUP.md step 1.4).');
+    record('rules', 'fail');
+  }catch(e){
+    const denied = String(e.code || e).includes('permission-denied');
+    put('rules', denied ? 'pass' : 'fail', 'Security rules are published',
+      denied ? 'Anonymous access correctly denied.' : 'Unexpected error: ' + (e.code || e.message) + ' — is Firestore created? (SETUP.md step 1.3)');
+    record('rules', denied ? 'pass' : 'fail');
+  }
+
+  /* 4. email/password auth enabled (probe with a bogus login and read the error code) */
+  put('auth', 'wait', 'Email/password sign-in is enabled', 'Testing…');
+  try{
+    await auth.signInWithEmailAndPassword('preflight-probe@example.com', 'x'.repeat(12));
+    put('auth', 'pass', 'Email/password sign-in is enabled', '');
+    record('auth', 'pass'); await auth.signOut();
+  }catch(e){
+    const code = String(e.code || '');
+    const enabled = !code.includes('operation-not-allowed');
+    put('auth', enabled ? 'pass' : 'fail', 'Email/password sign-in is enabled',
+      enabled ? 'Auth responds normally.' : 'Enable it: Authentication → Sign-in method → Email/Password (SETUP.md step 1.2).');
+    record('auth', enabled ? 'pass' : 'fail');
+  }
+
+  /* 5. authorized domain (only detectable as an auth error on a deployed site) */
+  const host = location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1'){
+    put('domain', 'warn', 'Authorized domain', 'Running on localhost (always allowed). After deploying, open this page ON your Netlify URL to confirm the domain is authorized (SETUP.md step 3.2).');
+    record('domain', 'pass');
+  } else {
+    put('domain', 'pass', 'Authorized domain', 'Running on ' + host + ' — if sign-in works below, the domain is authorized.');
+    record('domain', 'pass');
+  }
+
+  /* 6+7 need a signed-in user */
+  document.getElementById('signinbox').style.display = 'block';
+  window.signedChecks = async (doSignIn) => {
+    document.getElementById('signinbox').style.display = 'none';
+    if (doSignIn){
+      try{
+        if (doSignIn === 'google') await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+        else await auth.signInWithEmailAndPassword(document.getElementById('em').value.trim(), document.getElementById('pw').value);
+      }catch(e){
+        put('fx', 'fail', 'Signed-in checks', 'Sign-in failed: ' + (e.code || e.message) + ' — if you have no account yet, open the app and join first, then re-run this page.');
+        record('fx', 'fail'); return;
+      }
+      /* fixtures seeded */
+      put('fx', 'wait', 'Fixtures are loaded (both leagues)', 'Testing…');
+      try{
+        const [a, b, ov] = await Promise.all([ db.doc('fixtures/epl-1').get(), db.doc('fixtures/liga-380').get(), db.doc('meta/overrides').get() ]);
+        const ok = a.exists && b.exists && ov.exists;
+        put('fx', ok ? 'pass' : 'fail', 'Fixtures are loaded (both leagues)',
+          ok ? 'EPL + La Liga present.' : 'Missing — the admin must press “⚽ Load fixtures” on the Admin tab (SETUP.md step 4.2).');
+        record('fx', ok ? 'pass' : 'fail');
+      }catch(e){ put('fx', 'fail', 'Fixtures are loaded', 'Read failed: ' + (e.code || e.message)); record('fx', 'fail'); }
+      /* group exists + results protected */
+      put('adm', 'wait', 'Group created & results protected', 'Testing…');
+      try{
+        const me = auth.currentUser.uid;
+        const uSnap = await db.doc('users/'+me).get();
+        const pools = uSnap.exists ? (uSnap.data().pools || []) : [];
+        if (!pools.length){
+          put('adm', 'warn', 'Group created', 'You have no group yet — open the app, press "Create group", then re-run this page.');
+          record('adm', 'pass');
+        } else {
+          const pool = await db.doc('pools/'+pools[0]).get();
+          const isAdm = pool.exists && pool.data().adminUid === me;
+          let writeBlocked = false, writeOk = false;
+          try{ await db.doc('resultsGw/preflight-probe').set({ test: true }); writeOk = true; }
+          catch(e){ writeBlocked = String(e.code||'').includes('permission-denied'); }
+          if (isAdm) put('adm', writeOk ? 'pass' : 'fail', 'Group created & admin powers work',
+            writeOk ? 'Your group “' + pool.data().name + '” (code ' + pools[0] + ') — you run it, results writes allowed.' : 'You run the group but results writes failed — re-publish the latest firestore.rules (SETUP.md step 1.4).');
+          else put('adm', writeBlocked ? 'pass' : 'fail', 'Group joined & results protected',
+            writeBlocked ? 'Member of “' + (pool.exists?pool.data().name:pools[0]) + '”; non-admin results writes correctly blocked.' : 'DANGER: a non-admin wrote to results — re-publish the latest firestore.rules (SETUP.md step 1.4).');
+          record('adm', (isAdm ? writeOk : writeBlocked) ? 'pass' : 'fail');
+        }
+      }catch(e){ put('adm', 'fail', 'Group check', 'Failed: ' + (e.code || e.message)); record('adm', 'fail'); }
+    } else {
+      put('fx', 'warn', 'Signed-in checks skipped', 'Fixture seeding and admin protection not verified. Re-run after joining in the app.');
+      record('fx', 'pass'); record('adm', 'pass');
+    }
+  };
+})();
+</script>
+</body>
+</html>
