@@ -1248,3 +1248,4 @@ async function enterApp(){
   doAutoSync(); // fresh scores on every load, for every user
 }
 boot();
+

@@ -202,3 +202,4 @@ function createDemoApi(){
   };
   function fixturesEveryKicked(comp, gw){ return fixtures[comp].filter(f => f.gw === gw).every(f => kicked(f.id)); }
 }
+

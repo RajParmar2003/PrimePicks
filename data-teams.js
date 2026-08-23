@@ -131,3 +131,4 @@ function TEAMRESOLVE(comp, home, away){
   return { h, a };
 }
 if (typeof module !== 'undefined' && module.exports) module.exports = { TEAMDATA, TEAMRESOLVE, _tcDist, _tcUsable };
+

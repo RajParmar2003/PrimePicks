@@ -380,3 +380,4 @@ const FIXTURES_LALIGA = [
 [38,"2027-05-30T00:00Z","Real Madrid","RC Deportivo"],
 [38,"2027-05-30T00:00Z","Real Sociedad","Villarreal CF"],
 ];
+

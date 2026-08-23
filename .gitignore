@@ -8,3 +8,4 @@ deploy/              # generated Netlify drop folder — rebuild by copying sour
 qa/node_modules/
 *.log
 season-backup*.json
+

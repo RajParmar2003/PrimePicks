@@ -379,3 +379,4 @@ w.eval('PICK_FLUSH_MS = 20;'); // fast debounce for tests
   console.log('\nARENA UI: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('HARNESS ERROR:', e); process.exit(2); });
+

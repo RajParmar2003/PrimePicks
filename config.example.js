@@ -8,3 +8,4 @@ const FIREBASE_CONFIG = {
   authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
   projectId: "PASTE_YOUR_PROJECT_ID",
 };
+

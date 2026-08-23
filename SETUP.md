@@ -47,3 +47,4 @@ Picks lock at each game's kickoff · nobody sees your picks until kickoff · onl
 
 ## Data caveats (honest)
 EPL match 380 and La Liga's last rounds were reconstructed from round-robin constraints (source feed truncation) — pairings are provably right; La Liga's round-37/38 grouping and dates are provisional. Fix via the reschedule tool when confirmed. UCL isn't included yet because the 26/27 league-phase draw hasn't happened — it's a one-file add later.
+

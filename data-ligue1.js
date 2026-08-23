@@ -306,3 +306,4 @@ const FIXTURES_LIGUE1 = [
 [34,"2027-05-28T22:00Z","Stade Rennais FC","Angers SCO"],
 [34,"2027-05-28T22:00Z","RC Strasbourg Alsace","OGC Nice"]
 ];
+

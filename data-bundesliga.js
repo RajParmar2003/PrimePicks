@@ -306,3 +306,4 @@ const FIXTURES_BUND = [
 [34,"2027-05-22T13:30Z","RB Leipzig","TSG Hoffenheim"],
 [34,"2027-05-22T13:30Z","FC Bayern München","Eintracht Frankfurt"],
 ];
+

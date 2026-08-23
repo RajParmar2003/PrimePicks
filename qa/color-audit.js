@@ -99,3 +99,4 @@ if (typeof module !== 'undefined' && module.exports) module.exports = { TEAMDATA
 fs.writeFileSync(FILE, out);
 console.log(report.join('\n') || 'no changes');
 console.log(`\n${changed} colours corrected to curated historical primaries; resolver appended.`);
+

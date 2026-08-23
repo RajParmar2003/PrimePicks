@@ -114,3 +114,4 @@ ok(rNoPerf.perfects.u1 === 0 && rNoPerf.totals.u1 === 30, 'perfect off: 10 hits 
 
 console.log('\\nENGINE: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
+
