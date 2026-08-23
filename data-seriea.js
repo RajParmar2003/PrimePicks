@@ -381,3 +381,4 @@ const FIXTURES_SERIEA = [
 [38,"2027-05-29T00:00Z","Sassuolo","Inter"],
 ];
 
+
