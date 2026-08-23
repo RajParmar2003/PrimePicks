@@ -2,7 +2,9 @@
 
 A season-long football prediction league for friend groups, built because every fantasy league I've ever been in was dead by week 12.
 
-Live in production for a private 6-player league across the 2026-27 season: EPL, La Liga, Bundesliga, Serie A, and Ligue 1. No frameworks, no build step, no server to maintain: a static site on Netlify talking to Firebase, with live results syncing themselves from real match data.
+Live in production for 50+ players across multiple private groups, covering the 2026-27 season in the EPL, La Liga, Bundesliga, Serie A, and Ligue 1. Access is gated: an account or Google sign-in is required, and there is no public entry point. No frameworks, no build step, no server to maintain: a static site talking to Firebase, with live results syncing themselves from real match data.
+
+It started as a six-person league during the World Cup and grew by word of mouth through a live testing period, which is where most of what follows came from: the scoring rules, the data-integrity work, and the write path were all shaped by players filing complaints against a running season.
 
 ## The problem it solves
 
@@ -43,7 +45,7 @@ The three bugs that shaped the pipeline, each found by cross-checking against a 
 
 Everything that matters is enforced in Firestore security rules, server-side: picks immutable after kickoff (validated against stored kickoff timestamps), picks unreadable by other players before kickoff, results/fixtures writable only by group admins, group deletion impossible via the API, member documents shape-validated, avatar URLs restricted to a trusted host.
 
-Known, documented limitations (fine for a private friends league; the roadmap if it ever grows): results are shared across groups rather than isolated per group, there's no App Check bot protection on the free tier, and result persistence rides on admin devices opening the app.
+Known, documented limitations, stated rather than left to be found: results are shared across groups rather than isolated per group, there's no App Check bot protection on the free tier, and result persistence rides on admin devices opening the app. Per-group result isolation is the hardest item on the roadmap and the one that matters most now that there is more than one group.
 
 ## Run it
 
@@ -62,7 +64,7 @@ TypeScript from day one: the engine's shape-passing is exactly where types pay f
 
 ## Honest footnote
 
-Built in collaboration with AI (Anthropic's Claude) over an intense few weeks: the architecture decisions, QA direction, fact-checking discipline, and product design came from iterating on real failures with real users (my friends, who are ruthless bug reporters). Every line has been read, every tradeoff can be defended.
+Built in collaboration with AI (Anthropic's Claude) over roughly two months: the architecture, phasing, QA direction, fact-checking discipline, and product design are mine, and came from iterating on real failures against a live season with real players, who are ruthless bug reporters. Every line has been read, every tradeoff can be defended.
 
 MIT licensed. Not affiliated with any football league, club, or data provider.
 
