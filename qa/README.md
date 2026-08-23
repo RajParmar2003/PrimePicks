@@ -4,3 +4,4 @@ ui-test.js: 35 DOM-level checks, boots the real app in jsdom demo mode (npm i js
 Last run: 25/25 + 35/35 passed. Balance also validated by Monte Carlo season sims (see DESIGN.md pillars).
 
 
+

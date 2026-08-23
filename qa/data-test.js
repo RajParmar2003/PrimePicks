@@ -63,3 +63,4 @@ console.log(`  (info: ${fallbacks} fixtures use the away side's fallback colour 
 console.log(`\nDATA: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
 
+
